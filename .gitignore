@@ -1,0 +1,22 @@
+# Carpetas de compilación y dependencias
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+# Archivos de Visual Studio
+.vs/
+*.user
+*.suo
+*.cache
+*.dll
+*.pdb
+*.exe
+
+# Paquetes de NuGet
+*.nupkg
+**/packages/*
+
+# Bases de datos locales
+*.db
+*.sqlite
