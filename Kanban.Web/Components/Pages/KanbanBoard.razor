@@ -2,7 +2,9 @@
 @rendermode InteractiveServer
 @using Kanban.Web.Models
 @using Kanban.Web.Services
+@using Microsoft.JSInterop
 @inject TaskService TaskService
+@inject IJSRuntime JS
 
 <h3>Tablero Kanban</h3>
 
@@ -51,13 +53,15 @@ else
             <h4 class="text-center"> To Do <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.ToDo)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.ToDo))
             {
-                <div class="kanban-card" draggable="true"
-                     @ondragstart="() => draggedTask = task">
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="kanban-card" draggable="true" @ondragstart="() => draggedTask = task">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
                         <strong>@task.Titulo</strong>
-                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                        <!-- BOTÓN DE ELIMINAR VISIBLE -->
+                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-danger" title="Eliminar tarea">
+                             Eliminar
+                        </button>
                     </div>
-                    <p class="text-muted small mb-2">@task.Descripcion</p>
+                    <p class="text-muted small mb-3">@task.Descripcion</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">ID: @task.Id</small>
                         <button type="button" @onclick="() => MoveTask(task, EstadoTarea.InProgress)" class="btn btn-sm btn-outline-primary">
@@ -77,13 +81,14 @@ else
             <h4 class="text-center"> In Progress <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.InProgress)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.InProgress))
             {
-                <div class="kanban-card" draggable="true"
-                     @ondragstart="() => draggedTask = task">
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="kanban-card" draggable="true" @ondragstart="() => draggedTask = task">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
                         <strong>@task.Titulo</strong>
-                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-danger" title="Eliminar tarea">
+                             Eliminar
+                        </button>
                     </div>
-                    <p class="text-muted small mb-2">@task.Descripcion</p>
+                    <p class="text-muted small mb-3">@task.Descripcion</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">ID: @task.Id</small>
                         <button type="button" @onclick="() => MoveTask(task, EstadoTarea.Done)" class="btn btn-sm btn-outline-primary">
@@ -103,13 +108,14 @@ else
             <h4 class="text-center"> Done <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.Done)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.Done))
             {
-                <div class="kanban-card" draggable="true"
-                     @ondragstart="() => draggedTask = task">
-                    <div class="d-flex justify-content-between align-items-start">
+                <div class="kanban-card" draggable="true" @ondragstart="() => draggedTask = task">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
                         <strong>@task.Titulo</strong>
-                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-danger" title="Eliminar tarea">
+                             Eliminar
+                        </button>
                     </div>
-                    <p class="text-muted small mb-2">@task.Descripcion</p>
+                    <p class="text-muted small mb-3">@task.Descripcion</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">ID: @task.Id</small>
                         <button type="button" @onclick="() => MoveTask(task, EstadoTarea.ToDo)" class="btn btn-sm btn-outline-primary">
@@ -127,7 +133,6 @@ else
     private TaskItem newTask = new TaskItem { Estado = EstadoTarea.ToDo, UserId = 1 };
     private string? errorMessage;
     
-    // Variables para Drag & Drop
     private TaskItem? draggedTask;
     private EstadoTarea? dragOverColumn;
 
@@ -177,16 +182,20 @@ else
             await TaskService.UpdateTaskAsync(draggedTask);
             await LoadTasks();
         }
-        
-        // Limpiar el estado visual
         draggedTask = null;
         dragOverColumn = null;
     }
 
+    //  MEJORA 3: Confirmación real antes de eliminar
     private async Task DeleteTask(int taskId)
     {
-        await TaskService.DeleteTaskAsync(taskId);
-        await LoadTasks();
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "¿Estás seguro de que deseas eliminar esta tarea? Esta acción no se puede deshacer.");
+        
+        if (confirmed)
+        {
+            await TaskService.DeleteTaskAsync(taskId);
+            await LoadTasks();
+        }
     }
 }
 
@@ -207,6 +216,13 @@ else
         min-height: 400px;
         transition: background-color 0.2s ease, border 0.2s ease;
     }
+    
+    /*  MEJORA 1: Animación suave al aparecer/moverse */
+    @@keyframes slideIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
     .kanban-card {
         background-color: white;
         padding: 12px;
@@ -216,19 +232,30 @@ else
         border-left: 4px solid #007bff;
         transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
         cursor: grab;
+        animation: slideIn 0.3s ease-out; /* Aplica la animación */
     }
     .kanban-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
     }
     .kanban-card:active {
         cursor: grabbing;
         opacity: 0.6;
     }
     
-    /* Estilo visual cuando arrastras sobre una columna */
     .kanban-column.drag-over {
         background-color: #d4edda !important;
         border: 2px dashed #28a745;
+    }
+
+    /*  MEJORA 2: Vista Móvil Responsiva */
+    @@media (max-width: 768px) {
+        .kanban-board {
+            flex-direction: column;
+        }
+        .kanban-column {
+            min-width: 100%;
+            margin-bottom: 20px;
+        }
     }
 </style>
