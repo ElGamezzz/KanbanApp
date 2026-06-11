@@ -4,46 +4,100 @@
 @inject TaskService TaskService
 
 <h3>Tablero Kanban</h3>
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+<!-- Formulario para crear nueva tarea -->
+<div class="mb-4 p-3 bg-light border rounded">
+    <h5> Nueva Tarea</h5>
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input @bind="newTask.Titulo" @bind:event="oninput" class="form-control" placeholder="Título de la tarea" required />
+        </div>
+        <div class="col-md-4">
+            <input @bind="newTask.Descripcion" class="form-control" placeholder="Descripción breve" />
+        </div>
+        <div class="col-md-2">
+            <select @bind="newTask.UserId" class="form-select">
+                <option value="1">Usuario Demo (ID: 1)</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button @onclick="CreateTask" class="btn btn-primary w-100">
+                Crear
+            </button>
+        </div>
+    </div>
+</div>
 
 @if (tasks == null)
 {
     <p><em>Cargando tareas desde la API...</em></p>
+    <div class="spinner-border text-primary" role="status"></div>
 }
 else
 {
     <div class="kanban-board">
         <!-- Columna 1: To Do -->
         <div class="kanban-column">
-            <h4>📝 To Do</h4>
+            <h4 class="text-center"> To Do <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.ToDo)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.ToDo))
             {
                 <div class="kanban-card">
-                    <strong>@task.Titulo</strong>
-                    <p>@task.Descripcion</p>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong>@task.Titulo</strong>
+                        <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                    </div>
+                    <p class="text-muted small mb-2">@task.Descripcion</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">ID: @task.Id</small>
+                        <button @onclick="() => MoveTask(task, EstadoTarea.InProgress)" class="btn btn-sm btn-outline-primary">
+                            Mover a: In Progress 
+                        </button>
+                    </div>
                 </div>
             }
         </div>
 
         <!-- Columna 2: In Progress -->
         <div class="kanban-column">
-            <h4>⚙️ In Progress</h4>
+            <h4 class="text-center"> In Progress <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.InProgress)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.InProgress))
             {
                 <div class="kanban-card">
-                    <strong>@task.Titulo</strong>
-                    <p>@task.Descripcion</p>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong>@task.Titulo</strong>
+                        <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                    </div>
+                    <p class="text-muted small mb-2">@task.Descripcion</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">ID: @task.Id</small>
+                        <button @onclick="() => MoveTask(task, EstadoTarea.Done)" class="btn btn-sm btn-outline-primary">
+                            Mover a: Done 
+                        </button>
+                    </div>
                 </div>
             }
         </div>
 
         <!-- Columna 3: Done -->
         <div class="kanban-column">
-            <h4>✅ Done</h4>
+            <h4 class="text-center"> Done <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.Done)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.Done))
             {
                 <div class="kanban-card">
-                    <strong>@task.Titulo</strong>
-                    <p>@task.Descripcion</p>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <strong>@task.Titulo</strong>
+                        <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                    </div>
+                    <p class="text-muted small mb-2">@task.Descripcion</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">ID: @task.Id</small>
+                        <button @onclick="() => MoveTask(task, EstadoTarea.ToDo)" class="btn btn-sm btn-outline-primary">
+                            Mover a: To Do (Reabrir) 
+                        </button>
+                    </div>
                 </div>
             }
         </div>
@@ -52,11 +106,50 @@ else
 
 @code {
     private List<TaskItem>? tasks;
+    private TaskItem newTask = new TaskItem { Estado = EstadoTarea.ToDo, UserId = 1 };
+    private string? errorMessage; // <--- AGREGAR ESTA LÍNEA
 
     protected override async Task OnInitializedAsync()
     {
-        // Cuando la página carga, pedimos las tareas a la API
+        await LoadTasks();
+    }
+
+    private async Task LoadTasks()
+    {
         tasks = await TaskService.GetTasksAsync();
+    }
+
+    private async Task CreateTask()
+    {
+        errorMessage = null; // Limpiar errores previos
+        if (string.IsNullOrWhiteSpace(newTask.Titulo)) return;
+
+        try
+        {
+            await TaskService.CreateTaskAsync(newTask);
+            
+            // Limpiar formulario y recargar
+            newTask = new TaskItem { Estado = EstadoTarea.ToDo, UserId = 1 };
+            await LoadTasks();
+        }
+        catch (Exception ex)
+        {
+            // Si falla, mostramos el motivo exacto en la pantalla
+            errorMessage = $"Error al crear: {ex.Message}";
+        }
+    }
+    private async Task MoveTask(TaskItem task, EstadoTarea newState)
+    {
+        task.Estado = newState;
+        await TaskService.UpdateTaskAsync(task);
+        await LoadTasks(); // Recargar para reflejar el cambio en la columna correcta
+    }
+
+    private async Task DeleteTask(int taskId)
+    {
+        // Eliminación directa (en una app de producción agregaríamos un Modal de confirmación)
+        await TaskService.DeleteTaskAsync(taskId);
+        await LoadTasks();
     }
 }
 
@@ -65,9 +158,12 @@ else
         display: flex;
         gap: 20px;
         margin-top: 20px;
+        overflow-x: auto;
+        padding-bottom: 20px;
     }
     .kanban-column {
         flex: 1;
+        min-width: 280px;
         background-color: #f4f5f7;
         padding: 15px;
         border-radius: 8px;
@@ -77,8 +173,13 @@ else
         background-color: white;
         padding: 12px;
         margin-bottom: 10px;
-        border-radius: 5px;
+        border-radius: 6px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.12);
         border-left: 4px solid #007bff;
+        transition: transform 0.2s;
+    }
+    .kanban-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 </style>

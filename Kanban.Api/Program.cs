@@ -1,27 +1,42 @@
 using Kanban.Api.Data;
+using Kanban.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configurar Base de Datos (Lo que hicimos en la Fase 1)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Configurar Controladores y Swagger (¡Esto es lo que probablemente faltaba!)
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 3. Habilitar Swagger en modo Desarrollo
+// ==========================================
+// SEEDING: Crear Usuario Demo si no existe
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated(); // Asegura que la BD exista
+    
+    if (!db.Users.Any())
+    {
+        db.Users.Add(new User { Id = 1, Nombre = "Usuario Demo", Correo = "demo@kanban.com" });
+        db.SaveChanges();
+        Console.WriteLine("[SEED] Usuario Demo (ID: 1) creado en la base de datos.");
+    }
+}
+// ==========================================
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(); // Esto habilita la página web de Swagger
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();
-app.MapControllers(); // Esto le dice a la API que use los controladores (TasksController)
+app.MapControllers();
 
 app.Run();
