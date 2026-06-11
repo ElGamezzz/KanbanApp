@@ -1,11 +1,18 @@
 using Kanban.Web.Components;
+using Kanban.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+// Registrar el HttpClient configurado con la URL de nuestra API
+builder.Services.AddHttpClient<TaskService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]!);
+});
 
+// ... (el resto del código) ...
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
