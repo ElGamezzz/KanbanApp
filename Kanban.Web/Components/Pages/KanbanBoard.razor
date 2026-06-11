@@ -5,10 +5,12 @@
 @inject TaskService TaskService
 
 <h3>Tablero Kanban</h3>
+
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger">@errorMessage</div>
 }
+
 <!-- Formulario para crear nueva tarea -->
 <div class="mb-4 p-3 bg-light border rounded">
     <h5>Nueva Tarea</h5>
@@ -41,20 +43,25 @@ else
 {
     <div class="kanban-board">
         <!-- Columna 1: To Do -->
-        <div class="kanban-column">
+        <div class="kanban-column @(dragOverColumn == EstadoTarea.ToDo ? "drag-over" : "")"
+             @ondragover:preventDefault
+             @ondragenter="() => dragOverColumn = EstadoTarea.ToDo"
+             @ondragleave="() => dragOverColumn = null"
+             @ondrop="() => DropTask(EstadoTarea.ToDo)">
             <h4 class="text-center"> To Do <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.ToDo)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.ToDo))
             {
-                <div class="kanban-card">
+                <div class="kanban-card" draggable="true"
+                     @ondragstart="() => draggedTask = task">
                     <div class="d-flex justify-content-between align-items-start">
                         <strong>@task.Titulo</strong>
-                        <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
                     </div>
                     <p class="text-muted small mb-2">@task.Descripcion</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">ID: @task.Id</small>
-                        <button @onclick="() => MoveTask(task, EstadoTarea.InProgress)" class="btn btn-sm btn-outline-primary">
-                            Mover a: In Progress 
+                        <button type="button" @onclick="() => MoveTask(task, EstadoTarea.InProgress)" class="btn btn-sm btn-outline-primary">
+                            Mover 
                         </button>
                     </div>
                 </div>
@@ -62,20 +69,25 @@ else
         </div>
 
         <!-- Columna 2: In Progress -->
-        <div class="kanban-column">
+        <div class="kanban-column @(dragOverColumn == EstadoTarea.InProgress ? "drag-over" : "")"
+             @ondragover:preventDefault
+             @ondragenter="() => dragOverColumn = EstadoTarea.InProgress"
+             @ondragleave="() => dragOverColumn = null"
+             @ondrop="() => DropTask(EstadoTarea.InProgress)">
             <h4 class="text-center"> In Progress <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.InProgress)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.InProgress))
             {
-                <div class="kanban-card">
+                <div class="kanban-card" draggable="true"
+                     @ondragstart="() => draggedTask = task">
                     <div class="d-flex justify-content-between align-items-start">
                         <strong>@task.Titulo</strong>
-                        <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
                     </div>
                     <p class="text-muted small mb-2">@task.Descripcion</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">ID: @task.Id</small>
-                        <button @onclick="() => MoveTask(task, EstadoTarea.Done)" class="btn btn-sm btn-outline-primary">
-                            Mover a: Done 
+                        <button type="button" @onclick="() => MoveTask(task, EstadoTarea.Done)" class="btn btn-sm btn-outline-primary">
+                            Mover 
                         </button>
                     </div>
                 </div>
@@ -83,20 +95,25 @@ else
         </div>
 
         <!-- Columna 3: Done -->
-        <div class="kanban-column">
+        <div class="kanban-column @(dragOverColumn == EstadoTarea.Done ? "drag-over" : "")"
+             @ondragover:preventDefault
+             @ondragenter="() => dragOverColumn = EstadoTarea.Done"
+             @ondragleave="() => dragOverColumn = null"
+             @ondrop="() => DropTask(EstadoTarea.Done)">
             <h4 class="text-center"> Done <span class="badge bg-secondary">@tasks.Count(t => t.Estado == EstadoTarea.Done)</span></h4>
             @foreach (var task in tasks.Where(t => t.Estado == EstadoTarea.Done))
             {
-                <div class="kanban-card">
+                <div class="kanban-card" draggable="true"
+                     @ondragstart="() => draggedTask = task">
                     <div class="d-flex justify-content-between align-items-start">
                         <strong>@task.Titulo</strong>
-                        <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
+                        <button type="button" @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger border-0" title="Eliminar"></button>
                     </div>
                     <p class="text-muted small mb-2">@task.Descripcion</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <small class="text-muted">ID: @task.Id</small>
-                        <button @onclick="() => MoveTask(task, EstadoTarea.ToDo)" class="btn btn-sm btn-outline-primary">
-                            Mover a: To Do (Reabrir) 
+                        <button type="button" @onclick="() => MoveTask(task, EstadoTarea.ToDo)" class="btn btn-sm btn-outline-primary">
+                            Reabrir 
                         </button>
                     </div>
                 </div>
@@ -108,7 +125,11 @@ else
 @code {
     private List<TaskItem>? tasks;
     private TaskItem newTask = new TaskItem { Estado = EstadoTarea.ToDo, UserId = 1 };
-    private string? errorMessage; // <--- AGREGAR ESTA LÍNEA
+    private string? errorMessage;
+    
+    // Variables para Drag & Drop
+    private TaskItem? draggedTask;
+    private EstadoTarea? dragOverColumn;
 
     protected override async Task OnInitializedAsync()
     {
@@ -121,44 +142,49 @@ else
     }
 
     private async Task CreateTask()
-{
-    Console.WriteLine("[DEBUG] El método CreateTask() se ejecutó."); // <--- AGREGAR ESTA LÍNEA
-    
-    errorMessage = null;
-    
-    if (string.IsNullOrWhiteSpace(newTask.Titulo)) 
     {
-        errorMessage = "El título no puede estar vacío.";
-        Console.WriteLine("[DEBUG] El título está vacío. Saliendo del método.");
-        return;
+        errorMessage = null;
+        if (string.IsNullOrWhiteSpace(newTask.Titulo)) 
+        {
+            errorMessage = "El título no puede estar vacío.";
+            return;
+        }
+
+        try
+        {
+            await TaskService.CreateTaskAsync(newTask);
+            newTask = new TaskItem { Estado = EstadoTarea.ToDo, UserId = 1 };
+            await LoadTasks();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"ERROR AL CREAR: {ex.Message}";
+        }
     }
 
-    Console.WriteLine($"[DEBUG] Intentando crear tarea: {newTask.Titulo}");
-    
-    try
-    {
-        await TaskService.CreateTaskAsync(newTask);
-        Console.WriteLine("[DEBUG] Tarea creada exitosamente.");
-        
-        newTask = new TaskItem { Estado = EstadoTarea.ToDo, UserId = 1 };
-        await LoadTasks();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[DEBUG] ERROR: {ex.Message}");
-        errorMessage = $"ERROR AL CREAR: {ex.Message}";
-    }
-}
     private async Task MoveTask(TaskItem task, EstadoTarea newState)
     {
         task.Estado = newState;
         await TaskService.UpdateTaskAsync(task);
-        await LoadTasks(); // Recargar para reflejar el cambio en la columna correcta
+        await LoadTasks();
+    }
+
+    private async Task DropTask(EstadoTarea targetState)
+    {
+        if (draggedTask != null && draggedTask.Estado != targetState)
+        {
+            draggedTask.Estado = targetState;
+            await TaskService.UpdateTaskAsync(draggedTask);
+            await LoadTasks();
+        }
+        
+        // Limpiar el estado visual
+        draggedTask = null;
+        dragOverColumn = null;
     }
 
     private async Task DeleteTask(int taskId)
     {
-        // Eliminación directa (en una app de producción agregaríamos un Modal de confirmación)
         await TaskService.DeleteTaskAsync(taskId);
         await LoadTasks();
     }
@@ -179,6 +205,7 @@ else
         padding: 15px;
         border-radius: 8px;
         min-height: 400px;
+        transition: background-color 0.2s ease, border 0.2s ease;
     }
     .kanban-card {
         background-color: white;
@@ -187,10 +214,21 @@ else
         border-radius: 6px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.12);
         border-left: 4px solid #007bff;
-        transition: transform 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+        cursor: grab;
     }
     .kanban-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .kanban-card:active {
+        cursor: grabbing;
+        opacity: 0.6;
+    }
+    
+    /* Estilo visual cuando arrastras sobre una columna */
+    .kanban-column.drag-over {
+        background-color: #d4edda !important;
+        border: 2px dashed #28a745;
     }
 </style>
