@@ -30,22 +30,28 @@ Una aplicación web Full-Stack para la gestión de tareas estilo Kanban, desarro
    git clone https://github.com/TU_USUARIO/TU_REPOSITORIO.git
    cd KanbanApp
 
-2. Restaura las dependencias
+2. **Restaura las dependencias:**
+    ```bash
     dotnet restore
 
-3. Ejecuta la API (Backend):
+3. **Ejecuta la API (Backend):**
 Abre una terminal y ejecuta:
+    ```bash
     dotnet run --project Kanban.Api
+
 (La API se ejecutará por defecto en http://localhost:5243. La primera vez creará automáticamente la base de datos kanban.db y un usuario de prueba).
 
-4. Ejecuta la aplicación Web (Frontend):
+4. **Ejecuta la aplicación Web (Frontend):**
 Abre otra terminal (sin cerrar la anterior) y ejecuta:
+    ```bash
     dotnet run --project Kanban.Web
+
 (La aplicación web se ejecutará en http://localhost:5028 o el puerto que indique la consola).
 Abre tu navegador:
 Ve a http://localhost:5028/kanban y ¡comienza a gestionar tus tareas!
 
- Estructura del Proyecto
+ **Estructura del Proyecto**
+ ```bash
 KanbanApp/
 ├── Kanban.Api/               # Backend (Web API)
 │   ├── Controllers/          # Endpoints REST (TasksController)
